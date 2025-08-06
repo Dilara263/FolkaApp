@@ -1,7 +1,7 @@
 import React, { useState, useLayoutEffect } from 'react';
 import { View, StyleSheet, FlatList, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { PRODUCTS, CATEGORIES } from '../data/products';
-import ProductCard from '../components/ProductCard';
+import { ProductCard } from '../components';
 import { Ionicons } from '@expo/vector-icons';
 
 const HomeScreen = ({ navigation }) => {
