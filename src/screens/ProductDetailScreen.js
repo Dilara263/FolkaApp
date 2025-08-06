@@ -1,17 +1,14 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, Button, ScrollView, Alert } from 'react-native';
-import { PRODUCTS } from '../data/products'; // Veri dosyamızı tekrar import ediyoruz
+import { PRODUCTS } from '../data/products';
 
 // Bu sefer component'imiz { route } adında özel bir prop alıyor.
 // 'route' prop'u, bu ekrana gelirken gönderilen parametreleri içerir.
 const ProductDetailScreen = ({ route }) => {
     // 'route.params' içinden, HomeScreen'den gönderdiğimiz 'productId'yi alıyoruz.
     const { productId } = route.params; 
-    
-    // Gelen ID'yi kullanarak, PRODUCTS dizisi içinde doğru ürünü buluyoruz.
     const product = PRODUCTS.find(p => p.id === productId);
 
-    // Eğer bir sebepten ürün bulunamazsa (normalde olmamalı) bir uyarı gösterelim.
     if (!product) {
         return (
             <View style={styles.center}>
@@ -20,11 +17,13 @@ const ProductDetailScreen = ({ route }) => {
         );
     }
 
-    // Ürün bulunduysa, detaylarını ekranda gösterelim.
-    // İçerik ekrandan taşabileceği için ScrollView kullanmak iyi bir pratiktir.
+    const imageSource = typeof product.image === 'string'
+        ? { uri: product.image }
+        : product.image;
+
     return (
         <ScrollView style={styles.container}>
-            <Image source={{ uri: product.image }} style={styles.image} />
+            <Image source={imageSource} style={styles.image} />
             <View style={styles.detailsContainer}>
                 <Text style={styles.name}>{product.name}</Text>
                 <Text style={styles.price}>{product.price}</Text>

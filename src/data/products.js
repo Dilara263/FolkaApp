@@ -9,7 +9,7 @@ export const PRODUCTS = [
         name: 'Hand-Knitted Tote Bag',
         price: '250 TL',
         description: 'A beautiful and durable tote bag, hand-knitted with high-quality yarn. Perfect for daily use.',
-        image: 'https://picsum.photos/seed/bag/400/400',
+        image: require('../../assets/images/toteBag.webp'),
         category: 'Çanta', // Kategori bilgisi eklendi
     },
     {

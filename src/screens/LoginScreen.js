@@ -1,28 +1,18 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 
-// LoginScreen adında bir component (bileşen) oluşturuyoruz.
-// { navigation } parametresi, ekranlar arası geçiş yapmamızı sağlayacak özel bir proptur.
 const LoginScreen = ({ navigation }) => {
-    // Input alanlarındaki yazıları hafızada tutmak için "state" kullanıyoruz.
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
-    // "Login" butonuna basıldığında çalışacak olan fonksiyon.
     const handleLogin = () => {
-        // Şimdilik sadece inputların dolu olup olmadığını kontrol ediyoruz.
-        // İleride burada gerçek kullanıcı adı/şifre kontrolü yapılacak.
         if (email && password) {
-            // Eğer alanlar doluysa, kullanıcıyı 'Home' adlı ekrana yönlendir.
-            // 'replace' kullanıyoruz çünkü giriş yaptıktan sonra kullanıcı geri tuşuyla bu ekrana dönmemeli.
-            navigation.replace('Home');
+            navigation.replace('Main');
         } else {
-            // Alanlar boşsa bir uyarı göster.
             Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
         }
     };
 
-    // Bu kısım, ekranın nasıl görüneceğini belirleyen JSX kodudur.
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Folka</Text>
@@ -39,32 +29,36 @@ const LoginScreen = ({ navigation }) => {
                 placeholder="Şifreniz"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry // Şifrenin "..." şeklinde görünmesini sağlar.
+                secureTextEntry = {true}
             />
-            {/* Standart Button yerine TouchableOpacity kullanarak daha esnek butonlar yapabiliriz. */}
             <TouchableOpacity style={styles.button} onPress={handleLogin}>
                 <Text style={styles.buttonText}>Giriş Yap</Text>
             </TouchableOpacity>
+
+            <View style={styles.signUpContainer}>
+                <Text style={styles.signUpText}>Hesabın yok mu? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+                    <Text style={styles.signUpButtonText}>Kayıt Ol</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 };
 
-// Ekranın stil (görünüm) ayarlarını burada yapıyoruz.
-// StyleSheet.create kullanmak, performansı artırır ve kodu düzenli tutar.
 const styles = StyleSheet.create({
     container: {
-        flex: 1, // Ekranı tamamen kapla
-        justifyContent: 'center', // İçerikleri dikeyde ortala
-        alignItems: 'center', // İçerikleri yatayda ortala
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
         padding: 20,
-        backgroundColor: '#f5f5f5' // Arka plan rengi
+        backgroundColor: '#f5f5f5'
     },
     title: {
         fontSize: 42,
         fontWeight: 'bold',
         marginBottom: 40,
         color: '#333',
-        fontFamily: 'serif' // 'Folka' ismi için daha sanatsal bir font
+        fontFamily: 'serif'
     },
     input: {
         width: '100%',
@@ -80,7 +74,7 @@ const styles = StyleSheet.create({
     button: {
         width: '100%',
         height: 50,
-        backgroundColor: '#8B4513', // Marka kimliğine uygun bir kahverengi tonu
+        backgroundColor: '#8B4513',
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 8,
@@ -90,8 +84,20 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    signUpContainer: {
+        flexDirection: 'row',
+        marginTop: 20,
+    },
+    signUpText: {
+        fontSize: 16,
+        color: 'gray',
+    },
+    signUpButtonText: {
+        fontSize: 16,
+        color: '#8B4513',
+        fontWeight: 'bold',
     }
 });
 
-// Bu component'i projenin başka yerlerinde kullanabilmek için dışarıya açıyoruz.
 export default LoginScreen;

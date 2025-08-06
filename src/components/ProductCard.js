@@ -1,14 +1,15 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 
-// Bu bileşen, dışarıdan 'product' ve 'onPress' adında iki prop (özellik) alır.
-// 'product', gösterilecek ürünün bilgilerini içerir.
-// 'onPress', bu karta tıklandığında ne olacağını belirler.
 const ProductCard = ({ product, onPress }) => {
+
+    const imageSource = typeof product.image === 'string'
+        ? { uri: product.image } 
+        : product.image;
+
     return (
-        // TouchableOpacity, bir View'in tıklanılabilir olmasını sağlar.
         <TouchableOpacity style={styles.card} onPress={onPress}>
-            <Image source={{ uri: product.image }} style={styles.image} />
+            <Image source={imageSource} style={styles.image} />
             <View style={styles.infoContainer}>
                 <Text style={styles.name}>{product.name}</Text>
                 <Text style={styles.price}>{product.price}</Text>
@@ -19,19 +20,20 @@ const ProductCard = ({ product, onPress }) => {
 
 const styles = StyleSheet.create({
     card: {
-        flex: 1, // Grid yapısında esnek bir şekilde yer kaplamasını sağlar
+        flex: 1,
         margin: 8,
         backgroundColor: 'white',
         borderRadius: 8,
-        elevation: 3, // Android için gölge
-        shadowColor: '#000', // iOS için gölge
+        elevation: 3,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
     image: {
         width: '100%',
-        aspectRatio: 1, // Resmin en-boy oranını 1:1 (kare) yapar
+        height: 160,
+        resizeMode: 'cover',
         borderTopLeftRadius: 8,
         borderTopRightRadius: 8,
     },
