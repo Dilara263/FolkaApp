@@ -1,17 +1,20 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Alert } from 'react-native';
+import React, { useState, useContext, useEffect } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { USER } from '../data/products';
+// import { USER } from '../data/products'; // Artık statik USER'ı kullanmıyoruz
 import { CustomButton } from '../components';
+import { useAuth } from '../context/AuthContext';
 
-const InfoRow = ({ label, value, icon, editable = true }) => (
+const InfoRow = ({ label, value, icon, onChangeText, keyboardType, editable = true }) => (
     <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>{label}</Text>
         <View style={styles.infoValueContainer}>
             <TextInput 
                 style={styles.infoInput} 
-                defaultValue={value} 
+                value={value}
+                onChangeText={onChangeText}
                 editable={editable}
+                keyboardType={keyboardType}
             />
             <Ionicons name={icon} size={22} color="#ccc" />
         </View>
@@ -19,26 +22,72 @@ const InfoRow = ({ label, value, icon, editable = true }) => (
 );
 
 const EditProfileScreen = ({ navigation }) => {
+    const { user, updateProfile, isLoading } = useAuth();
 
-    const handleSave = () => {
-        Alert.alert("Başarılı", "Profil bilgileriniz güncellendi.");
-        navigation.goBack();
+    const [name, setName] = useState(user?.name || '');
+    const [email, setEmail] = useState(user?.email || '');
+    const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
+    const [address, setAddress] = useState(user?.address || '');
+
+    const handleSave = async () => {
+        if (!name || !email) {
+            Alert.alert("Hata", "Ad ve e-posta alanları boş bırakılamaz.");
+            return;
+        }
+
+        const result = await updateProfile(name, email, phoneNumber, address);
+
+        if (result.success) {
+            Alert.alert("Başarılı", result.message);
+            navigation.goBack();
+        } else {
+            Alert.alert("Hata", result.message);
+        }
     };
 
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.container}>
                 <View style={styles.avatarContainer}>
-                    <Image source={{ uri: USER.profileImage }} style={styles.avatar} />
+                    <Image 
+                        source={{ uri: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=1887&auto=format&fit=crop' }} // Şimdilik sabit bir resim
+                        style={styles.avatar} 
+                    />
                     <TouchableOpacity style={styles.editAvatarButton}>
                         <Ionicons name="add" size={24} color="white" />
                     </TouchableOpacity>
                 </View>
                 
-                <InfoRow label="Ad Soyad" value={USER.name} icon="pencil-outline" />
-                <InfoRow label="E-posta" value={USER.email} icon="mail-outline" editable={false} />
-                <InfoRow label="Telefon Numarası" value="+90 555 123 4567" icon="call-outline" />
-                <InfoRow label="Adres" value="Folka Sanat Sokağı, No:12" icon="location-outline" />
+                <InfoRow 
+                    label="Ad Soyad" 
+                    value={name} 
+                    onChangeText={setName} 
+                    icon="pencil-outline" 
+                    editable={!isLoading}
+                />
+                <InfoRow 
+                    label="E-posta" 
+                    value={email} 
+                    onChangeText={setEmail}
+                    icon="mail-outline" 
+                    keyboardType="email-address"
+                    editable={!isLoading}
+                />
+                <InfoRow 
+                    label="Telefon Numarası" 
+                    value={phoneNumber} 
+                    onChangeText={setPhoneNumber} 
+                    icon="call-outline" 
+                    keyboardType="phone-pad"
+                    editable={!isLoading}
+                />
+                <InfoRow 
+                    label="Adres" 
+                    value={address} 
+                    onChangeText={setAddress} 
+                    icon="location-outline" 
+                    editable={!isLoading}
+                />
                 
                 <View style={styles.buttonContainer}>
                     <CustomButton 
@@ -46,12 +95,16 @@ const EditProfileScreen = ({ navigation }) => {
                         onPress={() => navigation.goBack()}
                         style={styles.discardButton}
                         textStyle={styles.discardButtonText}
+                        disabled={isLoading}
                     />
                     <CustomButton 
-                        title="Kaydet" 
+                        title={isLoading ? "" : "Kaydet"}
                         onPress={handleSave}
                         style={styles.saveButton}
-                    />
+                        disabled={isLoading}
+                    >
+                        {isLoading && <ActivityIndicator color="#fff" />}
+                    </CustomButton>
                 </View>
             </ScrollView>
         </SafeAreaView>

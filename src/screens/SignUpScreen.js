@@ -1,24 +1,40 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, SafeAreaView, Image } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, SafeAreaView, Image, ActivityIndicator } from 'react-native';
 import { CustomTextInput, CustomButton } from '../components';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
 
 const SignUpScreen = ({ navigation }) => {
+    const { register, login, enterGuestMode } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-    const handleSignUp = () => {
-        if (name && email && password) {
-            navigation.replace('UserStack', { isGuest: false });
-        } else {
+    const handleSignUp = async () => {
+        if (!name || !email || !password) {
             Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
+            return;
         }
+        setIsLoading(true);
+        const response = await register(name, email, password);
+        
+        if (response && response.ok) {
+            await login(email, password);
+        } else {
+            try {
+                const errorData = await response.json();
+                Alert.alert('Kayıt Başarısız', errorData.message || 'Bir hata oluştu.');
+            } catch (e) {
+                Alert.alert('Kayıt Başarısız', 'Bir hata oluştu.');
+            }
+        }
+        setIsLoading(false);
     };
 
     const handleSkip = () => {
-        navigation.replace('UserStack', { isGuest: true });
+        enterGuestMode();
     };
 
     return (
@@ -38,7 +54,6 @@ const SignUpScreen = ({ navigation }) => {
 
                 <View style={styles.header}>
                     <Text style={styles.title}>Hesap Oluştur</Text>
-                    {/* --- GÜNCELLENEN METİN --- */}
                     <Text style={styles.subtitle}>Özgün tasarımları keşfet.</Text>
                 </View>
 
@@ -73,9 +88,10 @@ const SignUpScreen = ({ navigation }) => {
                 />
                 
                 <CustomButton
-                    title="Kayıt Ol"
+                    title={isLoading ? "Kayıt Olunuyor..." : "Kayıt Ol"}
                     onPress={handleSignUp}
                     style={styles.mainButton} 
+                    disabled={isLoading}
                 />
 
                 <View style={styles.dividerContainer}>
@@ -84,7 +100,6 @@ const SignUpScreen = ({ navigation }) => {
                     <View style={styles.divider} />
                 </View>
 
-                {/* --- FACEBOOK BUTONU KALDIRILDI --- */}
                 <View style={styles.socialLoginContainer}>
                     <TouchableOpacity style={styles.socialButton}>
                         <Ionicons name="logo-google" size={24} color="#555" />

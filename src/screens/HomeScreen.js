@@ -1,13 +1,38 @@
-import React, { useState, useLayoutEffect } from 'react';
-import { View, StyleSheet, FlatList, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
-import { PRODUCTS, CATEGORIES } from '../data/products';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
+import { View, StyleSheet, FlatList, Text, ActivityIndicator, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { CATEGORIES } from '../data/products';
 import { ProductCard } from '../components';
 import { Ionicons } from '@expo/vector-icons';
+import { API_ENDPOINTS } from '../config/api';
+
+const API_URL = 'http://10.0.2.2:5227/api/Products';
 
 const HomeScreen = ({ navigation }) => {
+    const [products, setProducts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('Tümü');
     const [searchTerm, setSearchTerm] = useState('');
     const [searchVisible, setSearchVisible] = useState(false);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await fetch(API_ENDPOINTS.PRODUCTS);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                setProducts(data);
+            } catch (e) {
+                setError(e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
 
     useLayoutEffect(() => {
         navigation.setOptions({
@@ -21,7 +46,7 @@ const HomeScreen = ({ navigation }) => {
         });
     }, [navigation, searchVisible]);
 
-    const filteredProducts = PRODUCTS
+    const filteredProducts = products
         .filter(product => selectedCategory === 'Tümü' || product.category === selectedCategory)
         .filter(product => product.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
@@ -31,7 +56,7 @@ const HomeScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
         />
     );
-
+    
     const ListHeader = () => (
         <>
             {searchVisible && (
@@ -58,6 +83,24 @@ const HomeScreen = ({ navigation }) => {
             </ScrollView>
         </>
     );
+
+    if (isLoading) {
+        return (
+            <View style={styles.center}>
+                <ActivityIndicator size="large" color="#8B4513" />
+                <Text>Ürünler Yükleniyor...</Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.center}>
+                <Text>Bir hata oluştu: {error.message}</Text>
+                <Text>API sunucunuzun çalıştığından emin olun.</Text>
+            </View>
+        );
+    }
 
     return (
         <FlatList

@@ -2,22 +2,32 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity, SafeAreaView, Image } from 'react-native';
 import { CustomTextInput, CustomButton } from '../components';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
+
 
 const LoginScreen = ({ navigation }) => {
+    const { login, enterGuestMode } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
-    const handleLogin = () => {
-        if (email && password) {
-            navigation.replace('UserStack');
-        } else {
+    const handleLogin = async () => {
+        if (!email || !password) {
             Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
+            return;
         }
+        setIsLoading(true);
+        const success = await login(email, password);
+        if (!success) {
+            Alert.alert('Giriş Başarısız', 'E-posta veya şifreniz hatalı.');
+        }
+
+        setIsLoading(false);
     };
 
     const handleSkip = () => {
-        navigation.replace('UserStack', { isGuest: true });
+        enterGuestMode();
     };
 
     return (
@@ -29,7 +39,6 @@ const LoginScreen = ({ navigation }) => {
                         style={styles.logo} 
                     />
                     <Text style={styles.brandName}>Folka</Text>
-                    {/* --- YENİ EKLENEN SLOGAN --- */}
                     <Text style={styles.tagline}>Folk Art, Halkın Sanatı</Text>
                 </View>
 
@@ -58,9 +67,10 @@ const LoginScreen = ({ navigation }) => {
                 />
                 
                 <CustomButton
-                    title="Giriş Yap"
+                    title={isLoading ? "Giriş Yapılıyor..." : "Giriş Yap"}
                     onPress={handleLogin}
                     style={styles.mainButton}
+                    disabled={isLoading}
                 />
 
                 <View style={styles.dividerContainer}>
@@ -93,62 +103,19 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: 'white' },
     container: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'white' },
-    
-    logoContainer: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        marginBottom: 50,
-    },
-    logo: {
-        width: 60,
-        height: 60,
-        resizeMode: 'contain',
-    },
-    brandName: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#333',
-        marginTop: 5,
-        fontFamily: 'serif',
-    },
-    // --- YENİ EKLENEN SLOGAN STİLİ ---
-    tagline: {
-        fontSize: 14,
-        color: 'gray',
-        marginTop: 2,
-        fontStyle: 'italic',
-    },
+    logoContainer: { flexDirection: 'column', alignItems: 'center', marginBottom: 50 },
+    logo: { width: 60, height: 60, resizeMode: 'contain' },
+    brandName: { fontSize: 32, fontWeight: 'bold', color: '#333', marginTop: 5, fontFamily: 'serif' },
+    tagline: { fontSize: 14, color: 'gray', marginTop: 2, fontStyle: 'italic' },
     mainButton: { backgroundColor: '#8B4513', marginTop: 10 },
     dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 25 },
     divider: { flex: 1, height: 1, backgroundColor: '#e0e0e0' },
     dividerText: { marginHorizontal: 15, color: 'gray', fontSize: 14 },
     socialLoginContainer: { flexDirection: 'row', justifyContent: 'center', width: '100%' },
-    socialButton: {
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-        borderRadius: 10,
-        padding: 15,
-    },
-    skipButton: {
-        marginTop: 25,
-        alignSelf: 'center',
-    },
-    // --- GÜNCELLENEN BUTON YAZISI STİLİ ---
-    skipButtonText: {
-        fontSize: 16,
-        color: '#8B4513',
-        fontWeight: '500',
-        // textDecorationLine: 'underline', // Bu satır kaldırıldı
-    },
-    footer: {
-        position: 'absolute',
-        bottom: 30,
-        left: 0,
-        right: 0,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
+    socialButton: { borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, padding: 15 },
+    skipButton: { marginTop: 25, alignSelf: 'center' },
+    skipButtonText: { fontSize: 16, color: '#8B4513', fontWeight: '500' },
+    footer: { position: 'absolute', bottom: 30, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     footerText: { fontSize: 16, color: 'gray' },
     footerLink: { fontSize: 16, color: '#8B4513', fontWeight: 'bold' }
 });

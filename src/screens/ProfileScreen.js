@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { USER } from '../data/products';
 import { CustomButton } from '../components';
+import { useAuth } from '../context/AuthContext';
 
 const ProfileListItem = ({ icon, text, onPress, isLogout = false }) => (
     <TouchableOpacity style={styles.listItem} onPress={onPress}>
@@ -13,17 +13,15 @@ const ProfileListItem = ({ icon, text, onPress, isLogout = false }) => (
 );
 
 const ProfileScreen = ({ navigation, route }) => {
-    const isGuest = route.params?.isGuest ?? false;
+    const { user, authenticated, logout } = useAuth();
+    const isGuest = !authenticated;
 
     const handleLogout = () => {
-        navigation.reset({
-            index: 0,
-            routes: [{ name: 'AuthStack' }],
-        });
+        logout();
     };
 
     const handleLoginRedirect = () => {
-        navigation.navigate('AuthStack', { screen: 'Login' });
+        logout();
     };
 
     const featureNotAvailable = () => {
@@ -34,6 +32,7 @@ const ProfileScreen = ({ navigation, route }) => {
         return (
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.guestContainer}>
+                    <Text style={[styles.pageTitle, { backgroundColor: 'white', borderBottomWidth: 0 }]}>Hesabım</Text>
                     <Ionicons name="person-circle-outline" size={100} color="#ccc" />
                     <Text style={styles.guestTitle}>Henüz giriş yapmadınız</Text>
                     <Text style={styles.guestSubtitle}>Favorilerinizi kaydetmek ve size özel fırsatları görmek için giriş yapın.</Text>
@@ -52,22 +51,22 @@ const ProfileScreen = ({ navigation, route }) => {
             <ScrollView contentContainerStyle={styles.container}>
                 <Text style={styles.pageTitle}>Hesabım</Text>
                 <View style={styles.headerContainer}>
-                    <Image source={{ uri: USER.profileImage }} style={styles.avatar} />
-                    <Text style={styles.name}>{USER.name}</Text>
-                    <Text style={styles.email}>{USER.email}</Text>
+                    <Image source={{ uri: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=1887&auto=format&fit=crop' }} style={styles.avatar} />
+                    <Text style={styles.name}>{user?.name}</Text>
+                    <Text style={styles.email}>{user?.email}</Text>
                 </View>
 
                 <View style={styles.summaryContainer}>
                     <TouchableOpacity style={styles.summaryBox} onPress={featureNotAvailable}>
-                        <Ionicons name="notifications-outline" size={24} color="#8B4513" />
+                        <Ionicons name="notifications-outline" size={28} color="#8B4513" />
                         <Text style={styles.summaryText}>Bildirimler</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.summaryBox} onPress={featureNotAvailable}>
-                        <Ionicons name="ticket-outline" size={24} color="#8B4513" />
+                        <Ionicons name="ticket-outline" size={28} color="#8B4513" />
                         <Text style={styles.summaryText}>Kuponlarım</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.summaryBox} onPress={featureNotAvailable}>
-                        <Ionicons name="time-outline" size={24} color="#8B4513" />
+                        <Ionicons name="time-outline" size={28} color="#8B4513" />
                         <Text style={styles.summaryText}>Geçmiş</Text>
                     </TouchableOpacity>
                 </View>
@@ -94,53 +93,14 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         backgroundColor: '#F5EFE6',
     },
-    headerContainer: { 
-        backgroundColor: '#F5EFE6', 
-        paddingTop: 10,
-        paddingBottom: 30,
-        alignItems: 'center', 
-        borderBottomLeftRadius: 30, 
-        borderBottomRightRadius: 30 
-    },
+    headerContainer: { backgroundColor: '#F5EFE6', paddingTop: 10, paddingBottom: 30, alignItems: 'center', borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
     avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: 'white' },
     name: { fontSize: 22, fontWeight: 'bold', color: '#333', marginTop: 10 },
     email: { fontSize: 16, color: '#666', marginTop: 5 },
-    summaryContainer: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-around', 
-        paddingHorizontal: 20, 
-        marginTop: -25,
-    },
-    summaryBox: { 
-        backgroundColor: 'white', 
-        padding: 15, 
-        borderRadius: 15, 
-        alignItems: 'center', 
-        width: '31%',
-        elevation: 5, 
-        shadowColor: '#000', 
-        shadowOffset: { width: 0, height: 4 }, 
-        shadowOpacity: 0.1, 
-        shadowRadius: 10 
-    },
-    summaryText: { 
-        marginTop: 5, 
-        fontSize: 12, 
-        color: '#555', 
-        fontWeight: '500' 
-    },
-    menuContainer: { 
-        marginTop: 25, 
-        marginHorizontal: 20, 
-        backgroundColor: 'white', 
-        borderRadius: 15, 
-        padding: 10, 
-        elevation: 2, 
-        shadowColor: '#000', 
-        shadowOffset: { width: 0, height: 1 }, 
-        shadowOpacity: 0.05, 
-        shadowRadius: 5 
-    },
+    summaryContainer: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 20, marginTop: -25 },
+    summaryBox: { backgroundColor: 'white', padding: 15, borderRadius: 15, alignItems: 'center', width: '31%', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
+    summaryText: { marginTop: 5, fontSize: 12, color: '#555', fontWeight: '500' },
+    menuContainer: { marginTop: 25, marginHorizontal: 20, backgroundColor: 'white', borderRadius: 15, padding: 10, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 5 },
     listItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 10 },
     listItemText: { flex: 1, marginLeft: 15, fontSize: 16, color: '#333' },
     logoutText: { color: '#FF3B30', fontWeight: '500' },
