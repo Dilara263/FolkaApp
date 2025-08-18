@@ -8,6 +8,9 @@ import { useAuth } from '../context/AuthContext';
 const Stack = createStackNavigator();
 
 const RootNavigation = () => {
+    // isLoading: AuthContext'in token yükleme veya ilk durumunu belirleme aşamasında olduğunu gösterir.
+    // authenticated: Kullanıcının geçerli bir token ile giriş yapmış olup olmadığını gösterir.
+    // isGuest: Kullanıcının giriş yapmadan devam etme modunda olup olmadığını gösterir.
     const { authenticated, isLoading, isGuest } = useAuth();
 
     if (isLoading) {
@@ -20,11 +23,11 @@ const RootNavigation = () => {
 
     return (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-            {(authenticated || isGuest) ? (
+            {authenticated || isGuest ? (
                 <Stack.Screen 
                     name="UserStack" 
                     component={UserStack} 
-                    initialParams={{ isGuest: !authenticated }}
+                    initialParams={{ isGuest: isGuest }} 
                 />
             ) : (
                 <Stack.Screen name="AuthStack" component={AuthStack} />

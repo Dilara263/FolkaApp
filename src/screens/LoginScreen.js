@@ -18,9 +18,15 @@ const LoginScreen = ({ navigation }) => {
             return;
         }
         setIsLoading(true);
-        const success = await login(email, password);
-        if (!success) {
-            Alert.alert('Giriş Başarısız', 'E-posta veya şifreniz hatalı.');
+        // AuthContext'ten dönen objeyi yakalayın
+        const result = await login(email, password); // 'success' yerine 'result' adını veriyoruz
+
+        // result objesinin 'success' özelliğini kontrol edin
+        if (!result.success) { // Eğer 'result.success' false ise uyarıyı göster
+            Alert.alert('Giriş Başarısız', result.message || 'E-posta veya şifreniz hatalı.');
+        } else {
+            // Başarılı giriş durumunda herhangi bir şey yapmanıza gerek yok,
+            // çünkü AuthContext zaten navigasyonu RootNavigation üzerinden yönetecek.
         }
 
         setIsLoading(false);
