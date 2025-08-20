@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { CustomButton } from '../components';
 import { useCart } from '../context/CartContext';
+import { API_ENDPOINTS } from '../config/api';
 
 const CartItemCard = ({ item, onRemove, onQuantityChange }) => {
     const productName = item.productName || 'Ürün Adı Yok'; 
@@ -42,7 +43,7 @@ const CartItemCard = ({ item, onRemove, onQuantityChange }) => {
 
 const CartScreen = ({ navigation }) => {
     const { authenticated, logout } = useAuth();
-    const { cartItems, isLoadingCart, removeFromCart, updateCartItemQuantity, clearCart, totalPrice } = useCart(); 
+    const { cartItems, isLoadingCart, removeFromCart, updateCartItemQuantity, clearCart, totalPrice, confirmOrder } = useCart(); 
 
     const [showOrderSummaryDetails, setShowOrderSummaryDetails] = useState(false); 
 
@@ -79,6 +80,13 @@ const CartScreen = ({ navigation }) => {
 
     const handleOrderSummary = () => {
         setShowOrderSummaryDetails(prevState => !prevState);
+    };
+
+    const handleConfirmOrder = async () => { 
+        const result = await confirmOrder();
+        if (result.success) {
+            console.log("Sipariş başarıyla oluşturuldu:", result.message);
+        }
     };
 
     const getFlatListPaddingBottom = () => {
@@ -134,16 +142,19 @@ const CartScreen = ({ navigation }) => {
                     <TouchableOpacity style={styles.orderSummaryButton} onPress={handleOrderSummary}>
                         <Ionicons 
                             name={showOrderSummaryDetails ? "chevron-down-outline" : "chevron-up-outline"} 
-                            size={20} 
+                            size={18} 
                             color="#8B4513" 
                         />
                         <Text style={styles.orderSummaryText}>Sipariş Özeti</Text>
                     </TouchableOpacity>
                     <CustomButton
-                        title="Sepeti Onayla"
-                        onPress={() => Alert.alert('Folka', 'Ödeme akışı yakında eklenecektir.')}
+                        title={isLoadingCart ? "" : "Sepeti Onayla"}
+                        onPress={handleConfirmOrder}
                         style={styles.confirmCartButton}
-                    />
+                        disabled={isLoadingCart}
+                    >
+                        {isLoadingCart && <ActivityIndicator color="#fff" />}
+                    </CustomButton>
                 </View>
             </View>
         </>

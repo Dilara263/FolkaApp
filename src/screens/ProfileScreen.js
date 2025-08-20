@@ -65,9 +65,9 @@ const ProfileScreen = ({ navigation, route }) => {
                         <Ionicons name="ticket-outline" size={28} color="#8B4513" />
                         <Text style={styles.summaryText}>Kuponlarım</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.summaryBox} onPress={featureNotAvailable}>
+                    <TouchableOpacity style={styles.summaryBox} onPress={() => navigation.navigate('MyOrders')}> 
                         <Ionicons name="time-outline" size={28} color="#8B4513" />
-                        <Text style={styles.summaryText}>Geçmiş</Text>
+                        <Text style={styles.summaryText}>Siparişlerim</Text> 
                     </TouchableOpacity>
                 </View>
 

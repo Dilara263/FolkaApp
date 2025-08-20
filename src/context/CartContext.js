@@ -99,6 +99,7 @@ export const CartProvider = ({ children }) => {
 
             if (!response.ok) {
                 const errorMessage = await parseErrorResponse(response);
+                // Hata durumunda rollback
                 setCartItems(originalCartItems);
                 setTotalPrice(originalTotalPrice);
                 throw new Error(errorMessage);
@@ -223,7 +224,6 @@ export const CartProvider = ({ children }) => {
         setIsLoadingCart(true);
         try {
             const response = await fetch(API_ENDPOINTS.CLEAR_CART, {
-                method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -249,6 +249,49 @@ export const CartProvider = ({ children }) => {
         }
     };
 
+    const confirmOrder = async () => {
+        if (!authenticated) {
+            Alert.alert("Giriş Gerekli", "Sipariş oluşturmak için lütfen giriş yapın.");
+            return { success: false, message: "Giriş yapmalısınız." };
+        }
+        if (cartItems.length === 0) {
+            Alert.alert("Uyarı", "Sepetiniz boş, sipariş oluşturulamaz.");
+            return { success: false, message: "Sepet boş." };
+        }
+
+        setIsLoadingCart(true);
+        try {
+            const response = await fetch(API_ENDPOINTS.ORDERS, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({})
+            });
+
+            if (!response.ok) {
+                const errorMessage = await parseErrorResponse(response);
+                throw new Error(errorMessage);
+            }
+
+            const data = await response.json();
+            
+            setCartItems([]);
+            setTotalPrice(0);
+            
+            Alert.alert("Sipariş Onaylandı", data.message || "Siparişiniz başarıyla oluşturuldu!");
+            return { success: true, message: data.message || 'Sipariş başarıyla oluşturuldu!' };
+
+        } catch (error) {
+            console.error("Sipariş oluşturma hatası:", error);
+            Alert.alert("Hata", error.message || "Sipariş oluşturulurken bir sorun oluştu.");
+            return { success: false, message: error.message || 'Sipariş oluşturulurken bir hata oluştu.' };
+        } finally {
+            setIsLoadingCart(false);
+        }
+    };
+
     const formattedTotalPrice = useMemo(() => {
         return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalPrice);
     }, [totalPrice]);
@@ -261,6 +304,7 @@ export const CartProvider = ({ children }) => {
         clearCart,
         updateCartItemQuantity,
         totalPrice: formattedTotalPrice,
+        confirmOrder,
     };
 
     return (

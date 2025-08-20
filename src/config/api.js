@@ -13,5 +13,7 @@ export const API_ENDPOINTS = {
     REMOVE_FROM_CART: `${API_BASE_URL}/Cart`,
     CLEAR_CART: `${API_BASE_URL}/Cart/clear`,
     UPDATE_CART_ITEM_QUANTITY: `${API_BASE_URL}/Cart/update-quantity`,
+    ORDERS: `${API_BASE_URL}/Order`,
+    MY_ORDERS: `${API_BASE_URL}/Order/MyOrders`,
 
 };

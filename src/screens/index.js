@@ -6,3 +6,4 @@ export { default as ProfileScreen } from './ProfileScreen';
 export { default as CartScreen } from './CartScreen';
 export { default as FavoritesScreen } from './FavoritesScreen.js';
 export { default as EditProfileScreen } from './EditProfileScreen.js';
+export { default as MyOrdersScreen } from './MyOrdersScreen.js';

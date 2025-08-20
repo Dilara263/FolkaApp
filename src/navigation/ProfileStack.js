@@ -1,6 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { ProfileScreen, EditProfileScreen } from '../screens';
+import { ProfileScreen, EditProfileScreen, MyOrdersScreen } from '../screens';
 
 const Stack = createStackNavigator();
 
@@ -21,6 +21,11 @@ const ProfileStack = ({route}) => {
                 component={EditProfileScreen} 
                 options={{ title: 'Profili Düzenle' }}
             />
+            <Stack.Screen
+            name="MyOrders" 
+            component={MyOrdersScreen} 
+            options={{ title: 'Siparişlerim' }} />
+
         </Stack.Navigator>
     );
 };
