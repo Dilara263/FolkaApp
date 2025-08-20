@@ -1,6 +1,7 @@
-
-const API_BASE_URL = 'http://10.0.2.2:5227/api';
-
+const API_BASE_URL = 'http://192.168.1.200:5227/api';
+//Tel: 'http://192.168.1.200:5227/api'
+//PC:  'http://10.0.2.2:5227/api'
+//Hotspot: 'http://192.168.137.1:5227/api'
 export const API_ENDPOINTS = {
     PRODUCTS: `${API_BASE_URL}/Products`,
     FAVORITES: `${API_BASE_URL}/Favorites`,
