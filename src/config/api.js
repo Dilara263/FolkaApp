@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://192.168.1.200:5227/api';
+const API_BASE_URL = 'http://10.0.2.2:5227/api';
 //Tel: 'http://192.168.1.200:5227/api'
 //PC:  'http://10.0.2.2:5227/api'
 //Hotspot: 'http://192.168.137.1:5227/api'
@@ -15,5 +15,9 @@ export const API_ENDPOINTS = {
     UPDATE_CART_ITEM_QUANTITY: `${API_BASE_URL}/Cart/update-quantity`,
     ORDERS: `${API_BASE_URL}/Order`,
     MY_ORDERS: `${API_BASE_URL}/Order/MyOrders`,
+    APPLY_COUPON: `${API_BASE_URL}/Cart/apply-coupon`,
+    REMOVE_COUPON: `${API_BASE_URL}/Cart/remove-coupon`,
+    MY_COUPONS: `${API_BASE_URL}/Coupon/MyCoupons`,
+
 
 };

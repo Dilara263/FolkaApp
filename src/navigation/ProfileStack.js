@@ -1,6 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { ProfileScreen, EditProfileScreen, MyOrdersScreen } from '../screens';
+import { ProfileScreen, EditProfileScreen, MyOrdersScreen, MyCouponsScreen } from '../screens';
 
 const Stack = createStackNavigator();
 
@@ -24,7 +24,13 @@ const ProfileStack = ({route}) => {
             <Stack.Screen
             name="MyOrders" 
             component={MyOrdersScreen} 
-            options={{ title: 'Siparişlerim' }} />
+            options={{ title: 'Siparişlerim' }} 
+            />
+            <Stack.Screen 
+            name="MyCoupons" 
+            component={MyCouponsScreen} 
+            options={{ title: 'Kuponlarım' }} 
+            />
 
         </Stack.Navigator>
     );

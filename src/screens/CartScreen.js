@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, ActivityIndicator, Image, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { CustomButton } from '../components';
 import { useCart } from '../context/CartContext';
 import { API_ENDPOINTS } from '../config/api';
 
+// Sepet öğesi kartı bileşeni
 const CartItemCard = ({ item, onRemove, onQuantityChange }) => {
     const productName = item.productName || 'Ürün Adı Yok'; 
     const productPrice = (item.productPrice !== undefined && item.productPrice !== null && !isNaN(item.productPrice))
@@ -43,9 +44,10 @@ const CartItemCard = ({ item, onRemove, onQuantityChange }) => {
 
 const CartScreen = ({ navigation }) => {
     const { authenticated, logout } = useAuth();
-    const { cartItems, isLoadingCart, removeFromCart, updateCartItemQuantity, clearCart, totalPrice, confirmOrder } = useCart(); 
+    const { cartItems, isLoadingCart, removeFromCart, updateCartItemQuantity, clearCart, totalPrice, discountAmount, appliedCouponCode, applyCoupon, removeCoupon, confirmOrder } = useCart(); 
 
     const [showOrderSummaryDetails, setShowOrderSummaryDetails] = useState(false); 
+    const [couponCode, setCouponCode] = useState(''); 
 
     const handleLoginRedirect = () => {
         logout();
@@ -89,10 +91,26 @@ const CartScreen = ({ navigation }) => {
         }
     };
 
+    const handleApplyCoupon = async () => {
+        if (!couponCode) {
+            Alert.alert("Uyarı", "Lütfen bir kupon kodu girin.");
+            return;
+        }
+        await applyCoupon(couponCode);
+    };
+
+    const handleRemoveCoupon = async () => {
+        await removeCoupon();
+        setCouponCode('');
+    };
+
     const getFlatListPaddingBottom = () => {
         const baseHeight = 60; 
         const detailedSummaryHeight = 150; 
-        return showOrderSummaryDetails ? baseHeight + detailedSummaryHeight + 20 : baseHeight + 20; 
+        const couponSectionHeight = 100; // Kupon alanı için tahmini yükseklik
+
+        // Eğer özet detayları gösteriliyorsa, kupon alanı da görünür olacağı için ek yükseklik
+        return showOrderSummaryDetails ? baseHeight + detailedSummaryHeight + couponSectionHeight + 20 : baseHeight + 20; 
     };
 
 
@@ -119,9 +137,36 @@ const CartScreen = ({ navigation }) => {
             <View style={styles.bottomFixedContainer}> 
                 {showOrderSummaryDetails && (
                     <View style={styles.detailedSummaryBox}>
+                        <View style={styles.couponInputContainer}>
+                            {appliedCouponCode ? (
+                                <View style={styles.appliedCouponBox}>
+                                    <Text style={styles.appliedCouponText}>Uygulanan Kupon: {appliedCouponCode}</Text>
+                                    <TouchableOpacity onPress={handleRemoveCoupon} style={styles.removeCouponButton}>
+                                        <Ionicons name="close-circle" size={20} color="#FF3B30" />
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <>
+                                    <TextInput
+                                        style={styles.couponTextInput}
+                                        placeholder="Kupon Kodu Girin"
+                                        value={couponCode}
+                                        onChangeText={setCouponCode}
+                                        autoCapitalize="characters"
+                                    />
+                                    <CustomButton
+                                        title="Uygula"
+                                        onPress={handleApplyCoupon}
+                                        style={styles.applyCouponButton}
+                                        textStyle={styles.applyCouponButtonText}
+                                    />
+                                </>
+                            )}
+                        </View>
+                        {/* Özet Detayları */}
                         <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>Ara Toplam:</Text>
-                            <Text style={styles.summaryValue}>{totalPrice}</Text>
+                            <Text style={styles.summaryValue}>{new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(parseFloat(totalPrice.replace(/[^\d.,]/g, '').replace(',', '.')) + parseFloat(discountAmount.replace(/[^\d.,]/g, '').replace(',', '.')))}</Text>
                         </View>
                         <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>Kargo Ücreti:</Text>
@@ -129,7 +174,7 @@ const CartScreen = ({ navigation }) => {
                         </View>
                         <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>İndirim:</Text>
-                            <Text style={styles.summaryValue}>- 0.00 TL</Text> 
+                            <Text style={styles.summaryValue}>- {discountAmount}</Text> 
                         </View>
                         <View style={styles.totalRow}>
                             <Text style={styles.totalText}>Toplam:</Text>
@@ -148,7 +193,7 @@ const CartScreen = ({ navigation }) => {
                         <Text style={styles.orderSummaryText}>Sipariş Özeti</Text>
                     </TouchableOpacity>
                     <CustomButton
-                        title={isLoadingCart ? "" : "Sepeti Onayla"}
+                        title={isLoadingCart ? "" : "Sepeti Onayla"} 
                         onPress={handleConfirmOrder}
                         style={styles.confirmCartButton}
                         disabled={isLoadingCart}
@@ -422,6 +467,54 @@ const styles = StyleSheet.create({
         height: 45, 
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    // Kupon giriş alanı için yeni stiller
+    couponInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15, // Detaylı özet ile butonlar arasına boşluk
+        paddingHorizontal: 15, // İç padding
+    },
+    couponTextInput: {
+        flex: 1,
+        height: 45,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 10,
+        paddingHorizontal: 15,
+        fontSize: 16,
+        color: '#333',
+        marginRight: 10,
+    },
+    applyCouponButton: {
+        backgroundColor: '#8B4513',
+        borderRadius: 10,
+        height: 45,
+        width: 100, // Sabit genişlik
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    applyCouponButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    appliedCouponBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#e6ffe6', // Açık yeşil arka plan
+        borderRadius: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        flex: 1,
+        justifyContent: 'space-between',
+    },
+    appliedCouponText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#28a745',
+    },
+    removeCouponButton: {
+        padding: 5,
     },
 });
 
