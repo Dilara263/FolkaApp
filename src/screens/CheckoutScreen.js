@@ -41,13 +41,12 @@ const CheckoutScreen = ({ navigation }) => {
             paymentMethod: paymentMethod
         };
 
-        console.log("Frontend'den gönderilen orderData:", orderData);
+        //console.log("Frontend'den gönderilen orderData:", orderData);
 
         const result = await confirmOrder(orderData);
 
         if (result.success) {
             Alert.alert("Siparişiniz Alındı!", "Siparişiniz başarıyla oluşturuldu.");
-            // Doğru yönlendirme: MainTabs'e git, Home sekmesine git, HomeStack içinde HomeMain ekranına git
             navigation.navigate('MainTabs', { screen: 'Home', params: { screen: 'HomeMain' } }); 
         } else {
             Alert.alert("Sipariş Hatası", result.message || "Siparişiniz oluşturulurken bir sorun oluştu.");
