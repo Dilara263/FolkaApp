@@ -5,9 +5,7 @@ import { Alert } from 'react-native';
 
 const CartContext = createContext();
 
-export const useCart = () => {
-    return useContext(CartContext);
-};
+export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
     const { authenticated, token } = useAuth();
@@ -18,14 +16,58 @@ export const CartProvider = ({ children }) => {
     const [isLoadingCart, setIsLoadingCart] = useState(true);
 
     const parseErrorResponse = async (response) => {
-        let errorData;
         try {
-            errorData = await response.json();
-        } catch (jsonError) {
+            const errorData = await response.json();
+            return errorData.message || 'Bilinmeyen bir hata oluştu.';
+        } catch {
             const rawText = await response.text();
-            errorData = { message: rawText || 'Bilinmeyen bir hata oluştu.' };
+            return rawText || 'Bilinmeyen bir hata oluştu.';
         }
-        return errorData.message || 'Bilinmeyen bir hata oluştu.';
+    };
+
+    const requireAuth = () => {
+        if (!authenticated) {
+            Alert.alert("Giriş Gerekli", "Lütfen giriş yapın.");
+            return false;
+        }
+        return true;
+    };
+
+    const saveStateForRollback = () => ({
+        cartItems: [...cartItems],
+        totalPrice,
+        discountAmount,
+        appliedCouponCode
+    });
+
+    const rollbackState = (state) => {
+        setCartItems(state.cartItems);
+        setTotalPrice(state.totalPrice);
+        setDiscountAmount(state.discountAmount);
+        setAppliedCouponCode(state.appliedCouponCode);
+    };
+
+    const apiRequest = async (url, options = {}, rollback = null) => {
+        try {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    ...(options.headers || {})
+                }
+            });
+
+            if (!response.ok) {
+                const errorMessage = await parseErrorResponse(response);
+                if (rollback) rollback();
+                throw new Error(errorMessage);
+            }
+
+            return await response.json();
+        } catch (error) {
+            Alert.alert("Hata", error.message || "Bir sorun oluştu.");
+            throw error;
+        }
     };
 
     useEffect(() => {
@@ -39,31 +81,13 @@ export const CartProvider = ({ children }) => {
                 return;
             }
 
+            setIsLoadingCart(true);
             try {
-                const response = await fetch(API_ENDPOINTS.CART, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorMessage = await parseErrorResponse(response);
-                    throw new Error(errorMessage);
-                }
-
-                const data = await response.json();
+                const data = await apiRequest(API_ENDPOINTS.CART);
                 setCartItems(data.cartItems || []);
                 setTotalPrice(data.totalPrice || 0);
                 setDiscountAmount(data.discountAmount || 0);
                 setAppliedCouponCode(data.appliedCouponCode || null);
-
-            } catch (error) {
-                console.error("Sepet yüklenirken hata oluştu:", error);
-                Alert.alert("Hata", error.message || "Sepet yüklenirken bir sorun oluştu.");
-                setCartItems([]);
-                setTotalPrice(0);
-                setDiscountAmount(0);
-                setAppliedCouponCode(null);
             } finally {
                 setIsLoadingCart(false);
             }
@@ -72,382 +96,201 @@ export const CartProvider = ({ children }) => {
         loadCart();
     }, [authenticated, token]);
 
+
     const addToCart = async (productId, quantity = 1) => {
-        if (!authenticated) {
-            Alert.alert("Giriş Gerekli", "Sepete ürün eklemek için lütfen giriş yapın.");
-            return { success: false, message: "Giriş yapmalısınız." };
-        }
+        if (!requireAuth()) return { success: false };
 
-        const originalCartItems = [...cartItems];
-        const originalTotalPrice = totalPrice;
-        const originalDiscountAmount = discountAmount;
-        const originalAppliedCouponCode = appliedCouponCode;
-
-        const existingItemIndex = cartItems.findIndex(item => item.productId === productId);
-        let newCartItems;
-        if (existingItemIndex > -1) {
-            newCartItems = [...cartItems];
-            newCartItems[existingItemIndex] = {
-                ...newCartItems[existingItemIndex],
-                quantity: newCartItems[existingItemIndex].quantity + quantity
-            };
-        } else {
-            newCartItems = [...cartItems, { productId: productId, quantity: quantity }];
-        }
-        setCartItems(newCartItems); // Optimistic update
+        const rollback = saveStateForRollback();
+        setCartItems(prev => {
+            const existing = prev.find(item => item.productId === productId);
+            return existing
+                ? prev.map(item =>
+                    item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item
+                )
+                : [...prev, { productId, quantity }];
+        });
 
         setIsLoadingCart(true);
         try {
-            const response = await fetch(API_ENDPOINTS.ADD_TO_CART, {
+            const data = await apiRequest(API_ENDPOINTS.ADD_TO_CART, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ productId: productId, quantity: quantity }),
-            });
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity })
+            }, () => rollbackState(rollback));
 
-            if (!response.ok) {
-                const errorMessage = await parseErrorResponse(response);
-                // Hata durumunda rollback
-                setCartItems(originalCartItems);
-                setTotalPrice(originalTotalPrice);
-                setDiscountAmount(originalDiscountAmount);
-                setAppliedCouponCode(originalAppliedCouponCode);
-                throw new Error(errorMessage);
-            }
-
-            const data = await response.json();
             setCartItems(data.cartItems || []);
             setTotalPrice(data.totalPrice || 0);
             setDiscountAmount(data.discountAmount || 0);
             setAppliedCouponCode(data.appliedCouponCode || null);
             return { success: true, message: 'Ürün sepete eklendi!' };
-        } catch (error) {
-            console.warn("Sepete ekleme uyarısı:", error.message);
-            Alert.alert("Hata", error.message || "Ürün sepete eklenirken bir sorun oluştu.");
-            return { success: false, message: error.message || 'Ürün sepete eklenirken bir hata oluştu.' };
         } finally {
             setIsLoadingCart(false);
         }
     };
 
     const updateCartItemQuantity = async (productId, newQuantity) => {
-        if (!authenticated) {
-            Alert.alert("Giriş Gerekli", "Sepet miktarını güncellemek için lütfen giriş yapın.");
-            return { success: false, message: "Giriş yapmalısınız." };
+        if (!requireAuth()) return { success: false };
+        const rollback = saveStateForRollback();
+
+        setCartItems(prev =>
+            newQuantity <= 0
+                ? prev.filter(item => item.productId !== productId)
+                : prev.map(item => item.productId === productId ? { ...item, quantity: newQuantity } : item)
+        );
+
+        setIsLoadingCart(true);
+        try {
+            const data = await apiRequest(API_ENDPOINTS.UPDATE_CART_ITEM_QUANTITY, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity: newQuantity })
+            }, () => rollbackState(rollback));
+
+            setCartItems(data.cartItems || []);
+            setTotalPrice(data.totalPrice || 0);
+            setDiscountAmount(data.discountAmount || 0);
+            setAppliedCouponCode(data.appliedCouponCode || null);
+            return { success: true, message: 'Sepet miktarı güncellendi!' };
+        } finally {
+            setIsLoadingCart(false);
+        }
+    };
+
+    const removeFromCart = async (productId) => {
+        if (!requireAuth()) return { success: false };
+        const rollback = saveStateForRollback();
+
+        setCartItems(prev => prev.filter(item => item.productId !== productId));
+
+        setIsLoadingCart(true);
+        try {
+            const data = await apiRequest(`${API_ENDPOINTS.REMOVE_FROM_CART}/${productId}`, {
+                method: 'DELETE'
+            }, () => rollbackState(rollback));
+
+            setCartItems(data.cartItems || []);
+            setTotalPrice(data.totalPrice || 0);
+            setDiscountAmount(data.discountAmount || 0);
+            setAppliedCouponCode(data.appliedCouponCode || null);
+            return { success: true, message: 'Ürün sepetten çıkarıldı.' };
+        } finally {
+            setIsLoadingCart(false);
+        }
+    };
+
+    const clearCart = async () => {
+        if (!requireAuth()) return { success: false };
+        const rollback = saveStateForRollback();
+
+        setCartItems([]);
+        setTotalPrice(0);
+        setDiscountAmount(0);
+        setAppliedCouponCode(null);
+
+        setIsLoadingCart(true);
+        try {
+            const data = await apiRequest(API_ENDPOINTS.CLEAR_CART, { method: 'DELETE' }, () => rollbackState(rollback));
+
+            setCartItems(data.cartItems || []);
+            setTotalPrice(data.totalPrice || 0);
+            setDiscountAmount(data.discountAmount || 0);
+            setAppliedCouponCode(data.appliedCouponCode || null);
+            return { success: true, message: 'Sepet temizlendi.' };
+        } finally {
+            setIsLoadingCart(false);
+        }
+    };
+
+    const applyCoupon = async (couponCode) => {
+        if (!requireAuth()) return { success: false };
+        const rollback = saveStateForRollback();
+
+        setIsLoadingCart(true);
+        try {
+            const data = await apiRequest(API_ENDPOINTS.APPLY_COUPON, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ couponCode })
+            }, () => rollbackState(rollback));
+
+            setCartItems(data.cartItems || []);
+            setTotalPrice(data.totalPrice || 0);
+            setDiscountAmount(data.discountAmount || 0);
+            setAppliedCouponCode(data.appliedCouponCode || null);
+            Alert.alert("Kupon Uygulandı", `İndirim: ${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(data.discountAmount)}`);
+            return { success: true, message: 'Kupon uygulandı!' };
+        } finally {
+            setIsLoadingCart(false);
+        }
+    };
+
+    const removeCoupon = async () => {
+        if (!requireAuth()) return { success: false };
+        const rollback = saveStateForRollback();
+
+        setIsLoadingCart(true);
+        try {
+            const data = await apiRequest(API_ENDPOINTS.REMOVE_COUPON, { method: 'DELETE' }, () => rollbackState(rollback));
+
+            setCartItems(data.cartItems || []);
+            setTotalPrice(data.totalPrice || 0);
+            setDiscountAmount(data.discountAmount || 0);
+            setAppliedCouponCode(data.appliedCouponCode || null);
+            Alert.alert("Kupon Kaldırıldı", "Kupon başarıyla kaldırıldı.");
+            return { success: true, message: 'Kupon kaldırıldı!' };
+        } finally {
+            setIsLoadingCart(false);
+        }
+    };
+
+    const confirmOrder = async (orderData) => {
+        if (!requireAuth()) return { success: false };
+        if (cartItems.length === 0) {
+            Alert.alert("Uyarı", "Sepetiniz boş.");
+            return { success: false, message: "Sepet boş." };
         }
 
-        const originalCartItems = [...cartItems];
-        const originalTotalPrice = totalPrice;
-        const originalDiscountAmount = discountAmount;
-        const originalAppliedCouponCode = appliedCouponCode;
+        setIsLoadingCart(true);
+        try {
+            const data = await apiRequest(API_ENDPOINTS.ORDERS, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
 
-            let newCartItems;
-            if (newQuantity <= 0) {
-                newCartItems = cartItems.filter(item => item.productId !== productId);
-            } else {
-                newCartItems = cartItems.map(item =>
-                    item.productId === productId ? { ...item, quantity: newQuantity } : item
-                );
-            }
-            setCartItems(newCartItems); // Optimistic update
-
-            setIsLoadingCart(true);
-            try {
-                const response = await fetch(API_ENDPOINTS.UPDATE_CART_ITEM_QUANTITY, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ productId: productId, quantity: newQuantity }),
-                });
-
-                if (!response.ok) {
-                    const errorMessage = await parseErrorResponse(response);
-                    setCartItems(originalCartItems);
-                    setTotalPrice(originalTotalPrice);
-                    setDiscountAmount(originalDiscountAmount);
-                    setAppliedCouponCode(originalAppliedCouponCode);
-                    throw new Error(errorMessage);
-                }
-
-                const data = await response.json();
-                setCartItems(data.cartItems || []);
-                setTotalPrice(data.totalPrice || 0);
-                setDiscountAmount(data.discountAmount || 0);
-                setAppliedCouponCode(data.appliedCouponCode || null);
-                return { success: true, message: 'Sepet miktarı güncellendi!' };
-            } catch (error) {
-                console.warn("Sepet miktar güncelleme uyarısı:", error.message);
-                Alert.alert("Hata", error.message || "Sepet miktarı güncellenirken bir sorun oluştu.");
-                return { success: false, message: error.message || 'Sepet miktarı güncellenirken bir hata oluştu.' };
-            } finally {
-                setIsLoadingCart(false);
-            }
-        };
-
-        const removeFromCart = async (productId) => {
-            if (!authenticated) {
-                Alert.alert("Giriş Gerekli", "Sepetten ürün çıkarmak için lütfen giriş yapın.");
-                return { success: false, message: "Giriş yapmalısınız." };
-            }
-
-            const originalCartItems = [...cartItems];
-            const originalTotalPrice = totalPrice;
-            const originalDiscountAmount = discountAmount;
-            const originalAppliedCouponCode = appliedCouponCode;
-
-            const newCartItems = cartItems.filter(item => item.productId !== productId);
-            setCartItems(newCartItems); // Optimistic update
-
-            setIsLoadingCart(true);
-            try {
-                const response = await fetch(`${API_ENDPOINTS.REMOVE_FROM_CART}/${productId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorMessage = await parseErrorResponse(response);
-                    setCartItems(originalCartItems);
-                    setTotalPrice(originalTotalPrice);
-                    setDiscountAmount(originalDiscountAmount);
-                    setAppliedCouponCode(originalAppliedCouponCode);
-                    throw new Error(errorMessage);
-                }
-
-                const data = await response.json();
-                setCartItems(data.cartItems || []);
-                setTotalPrice(data.totalPrice || 0);
-                setDiscountAmount(data.discountAmount || 0);
-                setAppliedCouponCode(data.appliedCouponCode || null);
-                return { success: true, message: 'Ürün sepetten çıkarıldı.' };
-            } catch (error) {
-                console.warn("Sepetten çıkarma uyarısı:", error.message);
-                Alert.alert("Hata", error.message || "Sepetten çıkarılırken bir sorun oluştu.");
-                return { success: false, message: error.message || 'Sepetten çıkarılırken bir hata oluştu.' };
-            } finally {
-                setIsLoadingCart(false);
-            }
-        };
-
-        const clearCart = async () => {
-            if (!authenticated) {
-                Alert.alert("Giriş Gerekli", "Sepeti temizlemek için lütfen giriş yapın.");
-                return { success: false, message: "Giriş yapmalısınız." };
-            }
-
-            const originalCartItems = [...cartItems];
-            const originalTotalPrice = totalPrice;
-            const originalDiscountAmount = discountAmount;
-            const originalAppliedCouponCode = appliedCouponCode;
-
-            setCartItems([]); // Optimistic update
+            setCartItems([]);
             setTotalPrice(0);
             setDiscountAmount(0);
             setAppliedCouponCode(null);
-
-            setIsLoadingCart(true);
-            try {
-                const response = await fetch(API_ENDPOINTS.CLEAR_CART, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorMessage = await parseErrorResponse(response);
-                    setCartItems(originalCartItems);
-                    setTotalPrice(originalTotalPrice);
-                    setDiscountAmount(originalDiscountAmount);
-                    setAppliedCouponCode(originalAppliedCouponCode);
-                    throw new Error(errorMessage);
-                }
-
-                const data = await response.json();
-                setCartItems(data.cartItems || []);
-                setTotalPrice(data.totalPrice || 0);
-                setDiscountAmount(data.discountAmount || 0);
-                setAppliedCouponCode(data.appliedCouponCode || null);
-                return { success: true, message: 'Sepet temizlendi.' };
-            } catch (error) {
-                console.warn("Sepet temizleme uyarısı:", error.message);
-                Alert.alert("Hata", error.message || "Sepet temizlenirken bir sorun oluştu.");
-                return { success: false, message: error.message || 'Sepet temizlenirken bir hata oluştu.' };
-            } finally {
-                setIsLoadingCart(false);
-            }
-        };
-
-        const applyCoupon = async (couponCode) => {
-            if (!authenticated) {
-                Alert.alert("Giriş Gerekli", "Kupon kodu uygulamak için lütfen giriş yapın.");
-                return { success: false, message: "Giriş yapmalısınız." };
-            }
-
-            const originalDiscountAmount = discountAmount;
-            const originalAppliedCouponCode = appliedCouponCode;
-            const originalTotalPrice = totalPrice;
-
-            setIsLoadingCart(true); // Yükleme göster
-            try {
-                const response = await fetch(API_ENDPOINTS.APPLY_COUPON, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ couponCode: couponCode }),
-                });
-
-                if (!response.ok) {
-                    const errorMessage = await parseErrorResponse(response);
-                    // Hata durumunda rollback
-                    setDiscountAmount(originalDiscountAmount);
-                    setAppliedCouponCode(originalAppliedCouponCode);
-                    setTotalPrice(originalTotalPrice);
-                    throw new Error(errorMessage);
-                }
-
-                const data = await response.json(); // Backend'den güncel sepet ve indirim bilgisi
-                setCartItems(data.cartItems || []);
-                setTotalPrice(data.totalPrice || 0);
-                setDiscountAmount(data.discountAmount || 0);
-                setAppliedCouponCode(data.appliedCouponCode || null);
-                Alert.alert("Kupon Uygulandı", `Kupon başarıyla uygulandı! İndirim: ${new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(data.discountAmount)}`);
-                return { success: true, message: 'Kupon başarıyla uygulandı!' };
-
-            } catch (error) {
-                console.warn("Kupon uygulama uyarısı:", error.message);
-                Alert.alert("Hata", error.message || "Kupon uygulanırken bir sorun oluştu.");
-                return { success: false, message: error.message || 'Kupon uygulanırken bir hata oluştu.' };
-            } finally {
-                setIsLoadingCart(false);
-            }
-        };
-
-        const removeCoupon = async () => {
-            if (!authenticated) {
-                return { success: false, message: "Giriş yapmalısınız." };
-            }
-
-            const originalDiscountAmount = discountAmount;
-            const originalAppliedCouponCode = appliedCouponCode;
-            const originalTotalPrice = totalPrice;
-
-            setIsLoadingCart(true);
-            try {
-                const response = await fetch(API_ENDPOINTS.REMOVE_COUPON, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorMessage = await parseErrorResponse(response);
-                    setDiscountAmount(originalDiscountAmount);
-                    setAppliedCouponCode(originalAppliedCouponCode);
-                    setTotalPrice(originalTotalPrice);
-                    throw new Error(errorMessage);
-                }
-
-                const data = await response.json();
-                setCartItems(data.cartItems || []);
-                setTotalPrice(data.totalPrice || 0);
-                setDiscountAmount(data.discountAmount || 0);
-                setAppliedCouponCode(data.appliedCouponCode || null);
-                Alert.alert("Kupon Kaldırıldı", "Kupon başarıyla kaldırıldı.");
-                return { success: true, message: 'Kupon başarıyla kaldırıldı.' };
-
-            } catch (error) {
-                console.warn("Kupon kaldırma uyarısı:", error.message);
-                Alert.alert("Hata", error.message || "Kupon kaldırılırken bir sorun oluştu.");
-                return { success: false, message: error.message || 'Kupon kaldırılırken bir hata oluştu.' };
-            } finally {
-                setIsLoadingCart(false);
-            }
-        };
-
-        const confirmOrder = async () => {
-            if (!authenticated) {
-                Alert.alert("Giriş Gerekli", "Sipariş oluşturmak için lütfen giriş yapın.");
-                return { success: false, message: "Giriş yapmalısınız." };
-            }
-            if (cartItems.length === 0) {
-                Alert.alert("Uyarı", "Sepetiniz boş, sipariş oluşturulamaz.");
-                return { success: false, message: "Sepet boş." };
-            }
-
-            setIsLoadingCart(true);
-            try {
-                const response = await fetch(API_ENDPOINTS.ORDERS, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        appliedCouponCode: appliedCouponCode // Kupon kodunu OrderController'a gönder
-                    })
-                });
-
-                if (!response.ok) {
-                    const errorMessage = await parseErrorResponse(response);
-                    throw new Error(errorMessage);
-                }
-
-                const data = await response.json();
-                
-                setCartItems([]);
-                setTotalPrice(0);
-                setDiscountAmount(0);
-                setAppliedCouponCode(null);
-                
-                Alert.alert("Sipariş Onaylandı", data.message || "Siparişiniz başarıyla oluşturuldu!");
-                return { success: true, message: data.message || 'Sipariş başarıyla oluşturuldu!' };
-
-            } catch (error) {
-                console.error("Sipariş oluşturma hatası:", error);
-                Alert.alert("Hata", error.message || "Sipariş oluşturulurken bir sorun oluştu.");
-                return { success: false, message: error.message || 'Sipariş oluşturulurken bir hata oluştu.' };
-            } finally {
-                setIsLoadingCart(false);
-            }
-        };
-
-        const formattedTotalPrice = useMemo(() => {
-            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalPrice);
-        }, [totalPrice]);
-
-        const formattedDiscountAmount = useMemo(() => {
-            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(discountAmount);
-        }, [discountAmount]);
-
-
-        const value = {
-            cartItems,
-            isLoadingCart,
-            addToCart,
-            removeFromCart,
-            clearCart,
-            updateCartItemQuantity,
-            totalPrice: formattedTotalPrice,
-            discountAmount: formattedDiscountAmount,
-            appliedCouponCode,
-            applyCoupon,
-            removeCoupon,
-            confirmOrder,
-        };
-
-        return (
-            <CartContext.Provider value={value}>
-                {children}
-            </CartContext.Provider>
-        );
+            Alert.alert("Sipariş Onaylandı", data.message || "Siparişiniz başarıyla oluşturuldu!");
+            return { success: true, message: data.message || 'Sipariş oluşturuldu!' };
+        } finally {
+            setIsLoadingCart(false);
+        }
     };
+
+
+    const formattedTotalPrice = useMemo(() =>
+        new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(totalPrice), [totalPrice]);
+
+    const formattedDiscountAmount = useMemo(() =>
+        new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(discountAmount), [discountAmount]);
+
+
+    const value = {
+        cartItems,
+        isLoadingCart,
+        addToCart,
+        updateCartItemQuantity,
+        removeFromCart,
+        clearCart,
+        applyCoupon,
+        removeCoupon,
+        confirmOrder,
+        totalPrice: formattedTotalPrice,
+        discountAmount: formattedDiscountAmount,
+        appliedCouponCode
+    };
+
+    return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+};

@@ -1,13 +1,15 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { CartScreen, FavoritesScreen } from '../screens';
+import { CartScreen, FavoritesScreen, CheckoutScreen } from '../screens'; 
 import HomeStack from './HomeStack';
 import ProfileStack from './ProfileStack';
+import { createStackNavigator } from '@react-navigation/stack'; 
 
+const RootStack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const UserStack = ({ route }) => {
+const MainTabs = ({ route }) => {
     const isGuest = route.params?.isGuest ?? false;
 
     return (
@@ -40,6 +42,31 @@ const UserStack = ({ route }) => {
                 initialParams={{ isGuest: isGuest }} 
             />
         </Tab.Navigator>
+    );
+};
+
+const UserStack = ({ route }) => {
+    const isGuest = route.params?.isGuest ?? false;
+
+    return (
+        <RootStack.Navigator>
+            <RootStack.Screen 
+                name="MainTabs" 
+                component={MainTabs} 
+                initialParams={{ isGuest: isGuest }} 
+                options={{ headerShown: false }}
+            />
+            <RootStack.Screen
+                name="Checkout" 
+                component={CheckoutScreen}
+                options={{ 
+                    headerShown: true,
+                    title: 'Siparişi Tamamla',
+                    headerTintColor: '#333', 
+                    headerTitleStyle: { fontWeight: 'bold' }
+                }}
+            />
+        </RootStack.Navigator>
     );
 };
 
