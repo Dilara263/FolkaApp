@@ -1,10 +1,11 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { CartScreen, FavoritesScreen, CheckoutScreen } from '../screens'; 
+import { CartScreen, FavoritesScreen, CheckoutScreen, AddressManagementScreen } from '../screens';
 import HomeStack from './HomeStack';
 import ProfileStack from './ProfileStack';
 import { createStackNavigator } from '@react-navigation/stack'; 
+import { AddressProvider } from '../context/AddressContext';
 
 const RootStack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -49,24 +50,36 @@ const UserStack = ({ route }) => {
     const isGuest = route.params?.isGuest ?? false;
 
     return (
-        <RootStack.Navigator>
-            <RootStack.Screen 
-                name="MainTabs" 
-                component={MainTabs} 
-                initialParams={{ isGuest: isGuest }} 
-                options={{ headerShown: false }}
-            />
-            <RootStack.Screen
-                name="Checkout" 
-                component={CheckoutScreen}
-                options={{ 
-                    headerShown: true,
-                    title: 'Siparişi Tamamla',
-                    headerTintColor: '#333', 
-                    headerTitleStyle: { fontWeight: 'bold' }
-                }}
-            />
-        </RootStack.Navigator>
+        <AddressProvider>
+            <RootStack.Navigator>
+                <RootStack.Screen 
+                    name="MainTabs" 
+                    component={MainTabs} 
+                    initialParams={{ isGuest: isGuest }} 
+                    options={{ headerShown: false }} 
+                />
+                <RootStack.Screen
+                    name="Checkout" 
+                    component={CheckoutScreen}
+                    options={{ 
+                        headerShown: true, 
+                        title: 'Siparişi Tamamla',
+                        headerTintColor: '#333', 
+                        headerTitleStyle: { fontWeight: 'bold' }
+                    }}
+                />
+                <RootStack.Screen
+                    name="AddressManagement" 
+                    component={AddressManagementScreen} 
+                    options={{ 
+                        headerShown: true, 
+                        title: 'Adreslerim',
+                        headerTintColor: '#333', 
+                        headerTitleStyle: { fontWeight: 'bold' }
+                    }}
+                />
+            </RootStack.Navigator>
+        </AddressProvider>
     );
 };
 

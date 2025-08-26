@@ -9,3 +9,4 @@ export { default as EditProfileScreen } from './EditProfileScreen.js';
 export { default as MyOrdersScreen } from './MyOrdersScreen.js';
 export { default as MyCouponsScreen} from './MyCouponsScreen.js';
 export { default as CheckoutScreen } from './CheckoutScreen.js';
+export { default as AddressManagementScreen } from './AddressManagementScrenn.js';

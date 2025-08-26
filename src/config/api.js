@@ -18,6 +18,8 @@ export const API_ENDPOINTS = {
     APPLY_COUPON: `${API_BASE_URL}/Cart/apply-coupon`,
     REMOVE_COUPON: `${API_BASE_URL}/Cart/remove-coupon`,
     MY_COUPONS: `${API_BASE_URL}/Coupon/MyCoupons`,
+    ADDRESSES: `${API_BASE_URL}/Address`,
+    MY_ADDRESSES: `${API_BASE_URL}/Address/MyAddresses`,
 
 
 };
