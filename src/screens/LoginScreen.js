@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, SafeAreaView, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, SafeAreaView, Image, ActivityIndicator, Switch } from 'react-native'; // Switch import edildi
 import { CustomTextInput, CustomButton } from '../components';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
     const { login, enterGuestMode } = useAuth();
@@ -11,6 +11,25 @@ const LoginScreen = ({ navigation }) => {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
+
+    useEffect(() => {
+        const loadRememberMe = async () => {
+            try {
+                const storedRememberMe = await AsyncStorage.getItem('rememberMe');
+                if (storedRememberMe === 'true') {
+                    setRememberMe(true);
+                    const storedEmail = await AsyncStorage.getItem('rememberedEmail');
+                    if (storedEmail) {
+                        setEmail(storedEmail);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load rememberMe state", e);
+            }
+        };
+        loadRememberMe();
+    }, []);
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -18,22 +37,37 @@ const LoginScreen = ({ navigation }) => {
             return;
         }
         setIsLoading(true);
-        // AuthContext'ten dönen objeyi yakalayın
-        const result = await login(email, password); // 'success' yerine 'result' adını veriyoruz
 
-        // result objesinin 'success' özelliğini kontrol edin
-        if (!result.success) { // Eğer 'result.success' false ise uyarıyı göster
-            Alert.alert('Giriş Başarısız', result.message || 'E-posta veya şifreniz hatalı.');
-        } else {
-            // Başarılı giriş durumunda herhangi bir şey yapmanıza gerek yok,
-            // çünkü AuthContext zaten navigasyonu RootNavigation üzerinden yönetecek.
+        try {
+            await AsyncStorage.setItem('rememberMe', rememberMe.toString());
+            if (rememberMe) {
+                await AsyncStorage.setItem('rememberedEmail', email);
+            } else {
+                await AsyncStorage.removeItem('rememberedEmail');
+            }
+        } catch (e) {
+            console.error("Failed to save rememberMe state", e);
         }
+
+        const result = await login(email, password);
+
+        if (!result.success) {
+            Alert.alert('Giriş Başarısız', result.message || 'E-posta veya şifreniz hatalı.');
+        } 
 
         setIsLoading(false);
     };
 
     const handleSkip = () => {
         enterGuestMode();
+    };
+
+    const handleToggleRememberMe = () => {
+        setRememberMe(prev => !prev);
+    };
+
+    const handleForgotPassword = () => {
+        navigation.navigate('ForgotPassword'); // ✨ ForgotPasswordScreen'e yönlendir
     };
 
     return (
@@ -49,6 +83,7 @@ const LoginScreen = ({ navigation }) => {
                 </View>
 
                 <CustomTextInput
+                    icon={<Ionicons name="mail-outline" size={24} color="gray" />}
                     placeholder="E-posta"
                     value={email}
                     onChangeText={setEmail}
@@ -56,28 +91,42 @@ const LoginScreen = ({ navigation }) => {
                     autoCapitalize="none"
                 />
                 <CustomTextInput
+                    icon={<Ionicons name="lock-closed-outline" size={24} color="gray" />}
                     placeholder="Şifre"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!isPasswordVisible}
                     iconPosition="right"
-                    icon={
+                    rightIcon={
                         <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                            <Ionicons 
-                                name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
-                                size={24} 
-                                color="gray" 
-                            />
+                            <Ionicons name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={24} color="gray" />
                         </TouchableOpacity>
                     }
                 />
-                
+
+                <View style={styles.optionsRow}>
+                    <View style={styles.rememberMe}>
+                        <Switch
+                            value={rememberMe}
+                            onValueChange={setRememberMe}
+                            thumbColor={rememberMe ? "#8B4513" : "#ccc"}
+                            trackColor={{ false: "#f0f0f0", true: "#D2B48C" }} // Track rengi eklendi
+                        />
+                        <Text style={styles.rememberText}>Beni Hatırla</Text>
+                    </View>
+                    <TouchableOpacity onPress={handleForgotPassword}>
+                        <Text style={styles.forgotPassword}>Şifremi Unuttum?</Text>
+                    </TouchableOpacity>
+                </View>
+
                 <CustomButton
-                    title={isLoading ? "Giriş Yapılıyor..." : "Giriş Yap"}
+                    title={isLoading ? "" : "Giriş Yap"}
                     onPress={handleLogin}
                     style={styles.mainButton}
                     disabled={isLoading}
-                />
+                >
+                    {isLoading && <ActivityIndicator color="#fff" />}
+                </CustomButton>
 
                 <View style={styles.dividerContainer}>
                     <View style={styles.divider} />
@@ -87,7 +136,7 @@ const LoginScreen = ({ navigation }) => {
 
                 <View style={styles.socialLoginContainer}>
                     <TouchableOpacity style={styles.socialButton}>
-                        <Ionicons name="logo-google" size={24} color="#555" />
+                        <Ionicons name="logo-google" size={18} color="#555" />
                     </TouchableOpacity>
                 </View>
 
@@ -95,10 +144,10 @@ const LoginScreen = ({ navigation }) => {
                     <Text style={styles.skipButtonText}>Giriş yapmadan devam et</Text>
                 </TouchableOpacity>
 
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>Hesabın yok mu? </Text>
+                <View style={styles.signUpContainer}>
+                    <Text style={styles.signUpText}>Hesabın yok mu?</Text>
                     <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-                        <Text style={styles.footerLink}>Kayıt Ol</Text>
+                        <Text style={styles.signUpLink}> Kayıt Ol</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -121,9 +170,13 @@ const styles = StyleSheet.create({
     socialButton: { borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, padding: 15 },
     skipButton: { marginTop: 25, alignSelf: 'center' },
     skipButtonText: { fontSize: 16, color: '#8B4513', fontWeight: '500' },
-    footer: { position: 'absolute', bottom: 30, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    footerText: { fontSize: 16, color: 'gray' },
-    footerLink: { fontSize: 16, color: '#8B4513', fontWeight: 'bold' }
+    signUpContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
+    signUpText: { fontSize: 14, color: 'gray' },
+    signUpLink: { fontSize: 14, color: '#8B4513', fontWeight: 'bold' },
+    optionsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, marginBottom: 15 },
+    rememberMe: { flexDirection: 'row', alignItems: 'center' },
+    rememberText: { marginLeft: 5, color: '#333', fontSize: 14 },
+    forgotPassword: { color: '#8B4513', fontSize: 14, fontWeight: '500' },
 });
 
 export default LoginScreen;

@@ -20,6 +20,9 @@ export const API_ENDPOINTS = {
     MY_COUPONS: `${API_BASE_URL}/Coupon/MyCoupons`,
     ADDRESSES: `${API_BASE_URL}/Address`,
     MY_ADDRESSES: `${API_BASE_URL}/Address/MyAddresses`,
+    FORGOT_PASSWORD: `${API_BASE_URL}/Auth/forgot-password`,
+    VERIFY_CODE: `${API_BASE_URL}/Auth/verify-code`,
+    RESET_PASSWORD: `${API_BASE_URL}/Auth/reset-password`,
 
 
 };

@@ -10,3 +10,7 @@ export { default as MyOrdersScreen } from './MyOrdersScreen.js';
 export { default as MyCouponsScreen} from './MyCouponsScreen.js';
 export { default as CheckoutScreen } from './CheckoutScreen.js';
 export { default as AddressManagementScreen } from './AddressManagementScrenn.js';
+export { default as ForgotPasswordScreen } from './ForgotPasswordScreen.js';
+export { default as VerificationCodeScreen} from './VerificationCodeScreen.js';
+export { default as ResetPasswordScreen } from './ResetPasswordScreen.js';
+
