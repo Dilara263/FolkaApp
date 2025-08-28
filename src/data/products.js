@@ -1,5 +1,3 @@
-export const CATEGORIES = ['Tümü', 'Çanta', 'Takı', 'Fular'];
-
 export const USER = {
     name: 'Dilara',
     email: 'dilara@email.com',

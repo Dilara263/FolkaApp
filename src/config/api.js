@@ -23,6 +23,10 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: `${API_BASE_URL}/Auth/forgot-password`,
     VERIFY_CODE: `${API_BASE_URL}/Auth/verify-code`,
     RESET_PASSWORD: `${API_BASE_URL}/Auth/reset-password`,
+    ADMIN_PRODUCTS: `${API_BASE_URL}/Products/admin`,
+    ADMIN_UPDATE_PRODUCT: `${API_BASE_URL}/Products/admin`,
+    ADMIN_DELETE_PRODUCT: `${API_BASE_URL}/Products/admin`,
+    CATEGORIES: `${API_BASE_URL}/Products/categories`,
 
 
 };

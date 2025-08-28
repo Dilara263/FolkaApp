@@ -83,7 +83,7 @@ const LoginScreen = ({ navigation }) => {
                 </View>
 
                 <CustomTextInput
-                    icon={<Ionicons name="mail-outline" size={24} color="gray" />}
+                    //icon={<Ionicons name="mail-outline" size={24} color="gray" />}
                     placeholder="E-posta"
                     value={email}
                     onChangeText={setEmail}
@@ -91,15 +91,18 @@ const LoginScreen = ({ navigation }) => {
                     autoCapitalize="none"
                 />
                 <CustomTextInput
-                    icon={<Ionicons name="lock-closed-outline" size={24} color="gray" />}
                     placeholder="Şifre"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!isPasswordVisible}
                     iconPosition="right"
-                    rightIcon={
+                    icon={
                         <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                            <Ionicons name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={24} color="gray" />
+                            <Ionicons 
+                                name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
+                                size={24} 
+                                color="gray" 
+                            />
                         </TouchableOpacity>
                     }
                 />

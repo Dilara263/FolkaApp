@@ -1,38 +1,43 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { View, StyleSheet, FlatList, Text, ActivityIndicator, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { CATEGORIES } from '../data/products';
 import { ProductCard } from '../components';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../config/api';
-
-const API_URL = 'http://10.0.2.2:5227/api/Products';
+import { useCategories } from '../context/CategoryContext';
 
 const HomeScreen = ({ navigation }) => {
     const [products, setProducts] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [error, setError] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('Tümü');
     const [searchTerm, setSearchTerm] = useState('');
     const [searchVisible, setSearchVisible] = useState(false);
 
-    useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                const response = await fetch(API_ENDPOINTS.PRODUCTS);
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const data = await response.json();
-                setProducts(data);
-            } catch (e) {
-                setError(e);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    const { categories, isLoadingCategories, fetchCategories } = useCategories(); 
 
+    const fetchProducts = async () => {
+        setIsLoadingProducts(true);
+        try {
+            const response = await fetch(API_ENDPOINTS.PRODUCTS);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Bilinmeyen bir hata oluştu.' }));
+                throw new Error(errorData.message || 'Network response was not ok');
+            }
+            const data = await response.json();
+            setProducts(data);
+        } catch (e) {
+            console.error("Ürünler yüklenirken hata:", e);
+            setError(e);
+            Alert.alert("Hata", e.message || "Ürünler yüklenirken bir sorun oluştu.");
+        } finally {
+            setIsLoadingProducts(false);
+        }
+    };
+
+    useEffect(() => {
         fetchProducts();
-    }, []);
+        fetchCategories();
+    }, []); 
 
     useLayoutEffect(() => {
         navigation.setOptions({
@@ -58,7 +63,7 @@ const HomeScreen = ({ navigation }) => {
     );
     
     const ListHeader = () => (
-        <>
+        <View>
             {searchVisible && (
                 <View style={styles.searchContainer}>
                     <TextInput
@@ -70,48 +75,71 @@ const HomeScreen = ({ navigation }) => {
                     />
                 </View>
             )}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
-                {CATEGORIES.map(category => (
-                    <TouchableOpacity
-                        key={category}
-                        style={[styles.categoryButton, selectedCategory === category && styles.categoryButtonActive]}
-                        onPress={() => setSelectedCategory(category)}
-                    >
-                        <Text style={[styles.categoryButtonText, selectedCategory === category && styles.categoryButtonTextActive]}>{category}</Text>
-                    </TouchableOpacity>
-                ))}
-            </ScrollView>
-        </>
+            <View style={styles.categoriesContainer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {isLoadingCategories ? (
+                        <ActivityIndicator size="small" color="#8B4513" style={{marginHorizontal: 10}} />
+                    ) : (
+                        categories.map(category => (
+                            <TouchableOpacity
+                                key={category}
+                                style={[
+                                    styles.categoryButton,
+                                    selectedCategory === category && styles.categoryButtonActive,
+                                ]}
+                                onPress={() => setSelectedCategory(category)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.categoryButtonText,
+                                        selectedCategory === category && styles.categoryButtonTextActive,
+                                    ]}
+                                >
+                                    {category}
+                                </Text>
+                            </TouchableOpacity>
+                        ))
+                    )}
+                </ScrollView>
+            </View>
+        </View>
     );
 
-    if (isLoading) {
+    if (isLoadingProducts || isLoadingCategories) { 
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#8B4513" />
-                <Text>Ürünler Yükleniyor...</Text>
+            <View style={styles.mainContainer}>
+                <ListHeader />
+                <View style={styles.center}>
+                    <ActivityIndicator size="large" color="#8B4513" />
+                    <Text>Veriler Yükleniyor...</Text>
+                </View>
             </View>
         );
     }
 
     if (error) {
         return (
-            <View style={styles.center}>
-                <Text>Bir hata oluştu: {error.message}</Text>
-                <Text>API sunucunuzun çalıştığından emin olun.</Text>
+            <View style={styles.mainContainer}>
+                <ListHeader />
+                <View style={styles.center}>
+                    <Text>Bir hata oluştu: {error.message}</Text>
+                    <Text>API sunucunuzun çalıştığından emin olun.</Text>
+                </View>
             </View>
         );
     }
 
     return (
-        <FlatList
-            style={styles.mainContainer}
-            data={filteredProducts}
-            renderItem={renderProductItem}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            ListHeaderComponent={ListHeader}
-            contentContainerStyle={styles.listContainer}
-        />
+        <View style={styles.mainContainer}>
+            <FlatList
+                data={filteredProducts}
+                renderItem={renderProductItem}
+                keyExtractor={(item) => item.id}
+                numColumns={2}
+                ListHeaderComponent={ListHeader}
+                contentContainerStyle={styles.listContainer}
+            />
+        </View>
     );
 };
 
@@ -121,6 +149,7 @@ const styles = StyleSheet.create({
         flex: 1, 
         backgroundColor: '#f5f5f5',
     },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     searchContainer: { 
         paddingHorizontal: 18, 
         paddingTop: 10, 

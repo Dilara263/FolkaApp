@@ -3,15 +3,16 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AuthStack from './AuthStack';
 import UserStack from './UserStack';
+import AdminStack from './AdminStack';
 import { useAuth } from '../context/AuthContext';
+import { CategoryProvider } from '../context/CategoryContext';
 
 const Stack = createStackNavigator();
 
 const RootNavigation = () => {
-    // isLoading: AuthContext'in token yükleme veya ilk durumunu belirleme aşamasında olduğunu gösterir.
-    // authenticated: Kullanıcının geçerli bir token ile giriş yapmış olup olmadığını gösterir.
-    // isGuest: Kullanıcının giriş yapmadan devam etme modunda olup olmadığını gösterir.
-    const { authenticated, isLoading, isGuest } = useAuth();
+    const { authenticated, isLoading, isGuest, user } = useAuth(); // user ve isGuest objesi alındı
+    const isAdmin = user?.role === 'Admin'; // Kullanıcının admin olup olmadığı kontrol edildi
+    const isLoggedInOrGuest = authenticated || isGuest; // Yeni kontrol eklendi
 
     if (isLoading) {
         return (
@@ -22,17 +23,23 @@ const RootNavigation = () => {
     }
 
     return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-            {authenticated || isGuest ? (
-                <Stack.Screen 
-                    name="UserStack" 
-                    component={UserStack} 
-                    initialParams={{ isGuest: isGuest }} 
-                />
-            ) : (
-                <Stack.Screen name="AuthStack" component={AuthStack} />
-            )}
-        </Stack.Navigator>
+        <CategoryProvider> {/* CategoryProvider buraya eklendi */}
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+                {isLoggedInOrGuest ? (
+                    isAdmin ? (
+                        <Stack.Screen name="AdminStack" component={AdminStack} />
+                    ) : (
+                        <Stack.Screen 
+                            name="UserStack" 
+                            component={UserStack} 
+                            initialParams={{ isGuest: isGuest }}
+                        />
+                    )
+                ) : (
+                    <Stack.Screen name="AuthStack" component={AuthStack} />
+                )}
+            </Stack.Navigator>
+        </CategoryProvider>
     );
 };
 
